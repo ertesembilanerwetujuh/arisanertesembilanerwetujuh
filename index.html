@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Arisan RT 009 RW 007</title>
+  <link rel="icon" type="image/png" href="logo2.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding-top: 10px;
+      font-family: 'Poppins', sans-serif;
+      background-color: #fefefe;
+      color: #333;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      padding: 20px;
+      background-color: #b00020;
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+      margin: 10px 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    header img { height: 40px; }
+    .tab-menu {
+      display: flex;
+      background: #ffe5e5;
+      margin: 20px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .tab-menu button {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      background: #ffd6d6;
+      font-size: 16px;
+      font-weight: 600;
+      color: #b00020;
+      cursor: pointer;
+    }
+    .tab-menu button.active {
+      background: #b00020;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    .tab-content.active { display: block; }
+    input, select, button {
+      font-size: 16px;
+      padding: 12px;
+      margin-bottom: 16px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+    button#btnTambah:active {
+      background-color: #b00020;
+      color: white;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: right;
+    }
+    th:first-child, td:first-child { text-align: left; width: 35%; }
+    td:nth-child(2), td:nth-child(3), td:nth-child(4) { width: 15%; }
+    td:last-child { text-align: center; color: red; font-weight: bold; cursor: pointer; width: 10%; }
+    th {
+      background-color: #ffe5e5;
+      color: #b00020;
+    }
+    .rekap-item {
+      display: flex;
+      justify-content: space-between;
+      background: #fff3f3;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+    }
+    .tab-wrapper {
+      padding: 0 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    .export-btns button {
+      margin-right: 10px;
+      padding: 10px 16px;
+    }
+    #totalRingkasan {
+      margin-bottom: 20px;
+      font-size: 15px;
+      background: #ffe5e5;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 500;
+      color: #b00020;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo.png" alt="Logo" />
+    Arisan RT 9 RW 7
+  </header>
+
+  <div class="tab-wrapper">
+    <div class="tab-menu">
+      <button class="active" onclick="switchTab('inputTab', this)">Input</button>
+      <button onclick="switchTab('tabelTab', this)">Tabel</button>
+      <button onclick="switchTab('rekapTab', this)">Ringkasan</button>
+    </div>
+
+    <div class="tab-content active" id="inputTab">
+      <input list="wargaList" id="nama" placeholder="Nama warga..." />
+      <datalist id="wargaList"></datalist>
+      <input type="number" id="bayar" placeholder="Nominal yang dibayarkan..." oninput="hitungKembalian()" />
+      <input type="number" id="bulan" placeholder="Berapa bulan membayar..." min="1" value="1" oninput="hitungKembalian()" />
+      <div id="kembalianInfo" style="margin-bottom: 10px; font-size: 14px; color: #555;"></div>
+      <input type="date" id="tanggal" />
+      <button id="btnTambah" onclick="tambahData()">Tambah</button>
+    </div>
+
+    <div class="tab-content" id="tabelTab">
+      <div class="export-btns">
+        <button onclick="exportExcel()">📄 Export ke Excel</button>
+      </div>
+
+      <input type="text" id="searchInput" placeholder="🔍 Search Nama..." oninput="tampilkanTabel()" />
+
+      <table>
+        <thead><tr><th>Nama Lengkap</th><th>Bulan</th><th>Bayar</th><th>Kembali</th><th>Hapus</th></tr></thead>
+        <tbody id="tabelData"></tbody>
+      </table>
+
+      <div style="text-align: center; margin-top: 20px;">
+        <button onclick="resetSemua()">🔄 Reset Semua</button>
+      </div>
+    </div>
+
+    <div class="tab-content" id="rekapTab">
+      <div id="totalRingkasan"></div>
+      <h3>Warga Belum Bayar</h3>
+      <div id="rekapBelum"></div>
+    </div>
+  </div>
+
+  <script>
+    const warga = ["AGUNG TRIARSO", "AGUS PURBOYONO", "AGUS SUHERMAN", "AHMAD JAUHARUL FARID", "ALI FATAH", "ALI IMRON", "AMIN SETYONO", "ARIS SAMITIO", "BENNY", "BUDI BAGUS SANTOSO", "DANANG", "DASUKI", "FAIZIN", "GIANTO", "HARNO", "HARTOPO", "KOZIN", "KUSNADI", "MARIYO", "MOCH ALY MAS AD", "NGALI", "NUR AZIS", "NUR KHOLISH", "PAULUS IRAWAN", "PONDOK RIYANTO", "PURWANTO", "RAGIL SANTOSO", "RISTANTO ARIS SAPUTRO", "RIZKI AGUNG UTOMO", "ROS HARMANTO", "SARJO", "SLAMET", "SLAMET UTOMO", "SOLEKAN", "SUBCHAN", "SUGIYANTO", "SUJONO", "SUPRIYADI", "SUPRIYANTO", "SUWITO", "SUYANTONO", "UMAR SADLI", "WAHYU", "WIDODO", "YOGA", "YUSUF LUKMAN HAKIM"];
+    const semuaData = JSON.parse(localStorage.getItem("arisanData")) || [];
+    document.getElementById("tanggal").valueAsDate = new Date();
+
+    warga.forEach(n => {
+      const opt = document.createElement("option");
+      opt.value = n;
+      document.getElementById("wargaList").appendChild(opt);
+    });
+
+    function hitungKembalian() {
+      const bayar = parseInt(document.getElementById("bayar").value);
+      const bulan = parseInt(document.getElementById("bulan").value || 1);
+      const total = bulan * 25000;
+      const kembalian = bayar - total;
+      document.getElementById("kembalianInfo").textContent = bayar ? `Kembalian: Rp ${kembalian.toLocaleString()}` : "";
+    }
+
+    function tambahData() {
+      const nama = document.getElementById("nama").value.trim().toUpperCase();
+      const tanggal = document.getElementById("tanggal").value;
+      const bayar = parseInt(document.getElementById("bayar").value);
+      const bulan = parseInt(document.getElementById("bulan").value || 1);
+      const kembalian = bayar - (bulan * 25000);
+
+      if (!nama || !tanggal || isNaN(bayar) || isNaN(bulan)) return alert("Isi semua data");
+      if (!warga.includes(nama)) return alert("❌ Nama tidak terdaftar di database warga!");
+
+      const hari = new Date().toISOString().split("T")[0];
+      const sudahAda = semuaData.some(d => d.nama === nama && d.tanggal === hari);
+      if (sudahAda) return alert("⚠️ Nama ini sudah mengisi untuk hari ini!");
+
+      semuaData.push({ nama, bulan, bayar, tanggal, kembalian });
+      localStorage.setItem("arisanData", JSON.stringify(semuaData));
+
+      document.getElementById("nama").value = "";
+      document.getElementById("bayar").value = "";
+      document.getElementById("bulan").value = "1";
+      document.getElementById("kembalianInfo").textContent = "";
+      tampilkanTabel();
+    }
+
+    function hapusData(index) {
+      if (confirm("Yakin ingin menghapus data ini?")) {
+        semuaData.splice(index, 1);
+        localStorage.setItem("arisanData", JSON.stringify(semuaData));
+        tampilkanTabel();
+      }
+    }
+
+    function tampilkanTabel() {
+      const tbody = document.getElementById("tabelData");
+      tbody.innerHTML = "";
+      const hari = new Date().toISOString().split("T")[0];
+      const keyword = document.getElementById("searchInput")?.value?.toUpperCase() || "";
+
+      semuaData.forEach((d, i) => {
+        if (d.tanggal === hari && d.nama.includes(keyword)) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${d.nama}</td>
+            <td>${d.bulan}</td>
+            <td>${d.bayar.toLocaleString()}</td>
+            <td>${d.kembalian.toLocaleString()}</td>
+            <td onclick="hapusData(${i})">&#10060;</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      });
+    }
+
+    function tampilkanRekap() {
+      const div = document.getElementById("rekapBelum");
+      const info = document.getElementById("totalRingkasan");
+      const hari = new Date().toISOString().split("T")[0];
+      const dataHariIni = semuaData.filter(d => d.tanggal === hari);
+
+      const yangSudah = new Set(dataHariIni.map(d => d.nama));
+      const belum = warga.filter(n => !yangSudah.has(n));
+
+      const total = dataHariIni.reduce((sum, d) => sum + d.bulan * 25000, 0);
+      const jumlahPembayar = dataHariIni.length;
+
+      info.textContent = `Jumlah: ${jumlahPembayar} warga | Total: Rp ${total.toLocaleString()}`;
+      div.innerHTML = belum.map(n => `<div class='rekap-item'><span>${n}</span><span>Rp 0</span></div>`).join('') || "<i>Semua warga sudah membayar</i>";
+    }
+
+    function switchTab(id, btn) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-menu button').forEach(b => b.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      btn.classList.add('active');
+      if (id === 'tabelTab') tampilkanTabel();
+      if (id === 'rekapTab') tampilkanRekap();
+    }
+
+    function exportExcel() {
+      const hari = new Date().toISOString().split("T")[0];
+      const dataHariIni = semuaData.filter(d => d.tanggal === hari);
+      const worksheet = XLSX.utils.json_to_sheet(dataHariIni);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+      XLSX.writeFile(workbook, `Arisan-${hari}.xlsx`);
+    }
+
+    function resetSemua() {
+      if (confirm("⚠️ Semua data akan dihapus, yakin?")) {
+        localStorage.removeItem("arisanData");
+        location.reload();
+      }
+    }
+
+    tampilkanTabel();
+    tampilkanRekap();
+  </script>
+</body>
+</html>
